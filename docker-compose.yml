@@ -1,0 +1,15 @@
+services:
+  memex:
+    build: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - memex-data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/memex.db
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-to-a-random-string}
+      - BETTER_AUTH_URL=http://localhost:3000
+    restart: unless-stopped
+
+volumes:
+  memex-data:
