@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Grid3x3,
+  LayoutGrid,
   List,
   Sun,
   Moon,
@@ -17,7 +17,6 @@ import { signOut } from "@/lib/auth-client";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { useViewStore } from "@/lib/stores/view-store";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +44,7 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border bg-background px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm">
       {/* Left: hamburger (mobile) */}
       <Button
         variant="ghost"
@@ -60,12 +59,12 @@ export function Header() {
       <form onSubmit={handleSearch} className="flex flex-1 justify-center">
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+          <input
             type="search"
             placeholder="Search bookmarks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="h-9 w-full rounded-lg border border-input bg-transparent py-2 pl-9 pr-3 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </div>
       </form>
@@ -76,24 +75,28 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={() => setView("grid")}
-          className={cn(view === "grid" && "bg-muted")}
+          className={cn(
+            "size-8",
+            view === "grid" && "bg-accent text-accent-foreground"
+          )}
         >
-          <Grid3x3 className="size-4" />
+          <LayoutGrid className="size-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setView("list")}
-          className={cn(view === "list" && "bg-muted")}
+          className={cn(
+            "size-8",
+            view === "list" && "bg-accent text-accent-foreground"
+          )}
         >
           <List className="size-4" />
         </Button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger
-            className="flex size-8 cursor-pointer items-center justify-center rounded-lg outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <div className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+          <DropdownMenuTrigger className="ml-1 flex size-8 cursor-pointer items-center justify-center rounded-lg outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
+            <div className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               U
             </div>
           </DropdownMenuTrigger>

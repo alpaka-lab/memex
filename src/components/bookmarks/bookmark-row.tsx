@@ -7,10 +7,10 @@ import {
   Pencil,
   Archive,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +43,7 @@ export function BookmarkRow({
 
   return (
     <div
-      className="group flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/50"
+      className="group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/50"
       onClick={() => onClick?.(bookmark)}
     >
       {/* Favicon */}
@@ -58,9 +58,7 @@ export function BookmarkRow({
             unoptimized
           />
         ) : (
-          <span className="text-xs font-bold uppercase text-muted-foreground">
-            {bookmark.domain.charAt(0)}
-          </span>
+          <ExternalLink className="size-3.5 text-muted-foreground" />
         )}
       </div>
 
@@ -77,7 +75,11 @@ export function BookmarkRow({
       {/* Tags */}
       <div className="hidden items-center gap-1 md:flex">
         {bookmark.tags?.slice(0, 3).map((tag) => (
-          <Badge key={tag} variant="secondary" className="text-[10px]">
+          <Badge
+            key={tag}
+            variant="secondary"
+            className="rounded-md px-1.5 py-0 text-[10px] font-medium"
+          >
             {tag}
           </Badge>
         ))}
@@ -90,9 +92,8 @@ export function BookmarkRow({
 
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon-xs"
+        <button
+          className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-accent"
           onClick={(e) => {
             e.stopPropagation();
             onToggleStar?.(bookmark.id);
@@ -101,17 +102,19 @@ export function BookmarkRow({
           <Star
             className={cn(
               "size-3.5",
-              bookmark.isStarred && "fill-yellow-400 text-yellow-400"
+              bookmark.isStarred
+                ? "fill-yellow-400 text-yellow-400"
+                : "text-muted-foreground"
             )}
           />
-        </Button>
+        </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md opacity-0 outline-none hover:bg-muted group-hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md opacity-0 outline-none transition-opacity hover:bg-accent group-hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50"
             onClick={(e) => e.stopPropagation()}
           >
-            <MoreHorizontal className="size-3.5" />
+            <MoreHorizontal className="size-3.5 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
