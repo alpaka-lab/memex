@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { Plus, Bookmark } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { useViewStore } from "@/lib/stores/view-store";
@@ -30,6 +32,51 @@ export default function BookmarksPage() {
     isFetchingNextPage,
     isLoading,
   } = useBookmarks();
+
+  const queryClient = useQueryClient();
+
+  const toggleStar = useMutation({
+    mutationFn: async (id: string) => {
+      const bookmark = bookmarks.find((b) => b.id === id);
+      const res = await fetch(`/api/bookmarks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isStarred: bookmark?.isStarred ? 0 : 1 }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle star");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
+  });
+
+  const archiveBookmark = useMutation({
+    mutationFn: async (id: string) => {
+      const bookmark = bookmarks.find((b) => b.id === id);
+      const res = await fetch(`/api/bookmarks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: bookmark?.isArchived ? 0 : 1 }),
+      });
+      if (!res.ok) throw new Error("Failed to archive");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      toast.success("Bookmark archived");
+    },
+  });
+
+  const deleteBookmark = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/bookmarks/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      toast.success("Bookmark deleted");
+    },
+  });
 
   // Infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -105,6 +152,9 @@ export default function BookmarksPage() {
               bookmark={bookmark as BookmarkData}
               onClick={handleBookmarkClick}
               onEdit={(id) => openDetail(id)}
+              onToggleStar={(id) => toggleStar.mutate(id)}
+              onArchive={(id) => archiveBookmark.mutate(id)}
+              onDelete={(id) => deleteBookmark.mutate(id)}
             />
           ))}
         </div>
@@ -119,6 +169,9 @@ export default function BookmarksPage() {
               bookmark={bookmark as BookmarkData}
               onClick={handleBookmarkClick}
               onEdit={(id) => openDetail(id)}
+              onToggleStar={(id) => toggleStar.mutate(id)}
+              onArchive={(id) => archiveBookmark.mutate(id)}
+              onDelete={(id) => deleteBookmark.mutate(id)}
             />
           ))}
         </div>
