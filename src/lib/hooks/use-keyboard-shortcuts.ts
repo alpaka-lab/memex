@@ -4,14 +4,22 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useViewStore } from "@/lib/stores/view-store";
+import { useSelectionStore } from "@/lib/stores/selection-store";
 
 export function useKeyboardShortcuts() {
   const router = useRouter();
   const { openQuickAdd } = useModalStore();
   const { view, setView } = useViewStore();
+  const { isSelecting, clear: clearSelection } = useSelectionStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape: clear selection
+      if (e.key === "Escape" && isSelecting) {
+        clearSelection();
+        return;
+      }
+
       // Ignore when typing in inputs
       const target = e.target as HTMLElement;
       if (
@@ -77,5 +85,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router, openQuickAdd, view, setView]);
+  }, [router, openQuickAdd, view, setView, isSelecting, clearSelection]);
 }
