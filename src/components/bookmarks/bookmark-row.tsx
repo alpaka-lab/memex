@@ -23,6 +23,8 @@ import type { BookmarkData } from "./bookmark-card";
 
 interface BookmarkRowProps {
   bookmark: BookmarkData;
+  selected?: boolean;
+  onSelect?: (id: string) => void;
   onToggleStar?: (id: string) => void;
   onEdit?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -32,6 +34,8 @@ interface BookmarkRowProps {
 
 export function BookmarkRow({
   bookmark,
+  selected,
+  onSelect,
   onToggleStar,
   onEdit,
   onArchive,
@@ -45,9 +49,34 @@ export function BookmarkRow({
 
   return (
     <div
-      className="group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/50"
+      className={cn(
+        "group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/50",
+        selected && "ring-2 ring-primary"
+      )}
       onClick={() => onClick?.(bookmark)}
     >
+      {/* Selection checkbox */}
+      {onSelect && (
+        <button
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded border-2 transition-all",
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-muted-foreground/30 opacity-0 group-hover:opacity-100"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(bookmark.id);
+          }}
+        >
+          {selected && (
+            <svg className="size-3" viewBox="0 0 14 14" fill="none">
+              <path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+      )}
+
       {/* Favicon */}
       <div className="flex size-5 shrink-0 items-center justify-center">
         {bookmark.favicon ? (

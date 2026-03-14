@@ -36,6 +36,8 @@ export interface BookmarkData {
 
 interface BookmarkCardProps {
   bookmark: BookmarkData;
+  selected?: boolean;
+  onSelect?: (id: string) => void;
   onToggleStar?: (id: string) => void;
   onEdit?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -45,6 +47,8 @@ interface BookmarkCardProps {
 
 export function BookmarkCard({
   bookmark,
+  selected,
+  onSelect,
   onToggleStar,
   onEdit,
   onArchive,
@@ -53,7 +57,10 @@ export function BookmarkCard({
 }: BookmarkCardProps) {
   return (
     <div
-      className="group cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md"
+      className={cn(
+        "group cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md",
+        selected && "ring-2 ring-primary"
+      )}
       onClick={() => onClick?.(bookmark)}
     >
       {/* Thumbnail */}
@@ -72,6 +79,28 @@ export function BookmarkCard({
               {bookmark.domain.charAt(0)}
             </span>
           </div>
+        )}
+
+        {/* Selection checkbox */}
+        {onSelect && (
+          <button
+            className={cn(
+              "absolute top-2 left-2 flex size-6 items-center justify-center rounded border-2 transition-all",
+              selected
+                ? "border-primary bg-primary text-primary-foreground opacity-100"
+                : "border-white/70 bg-background/60 opacity-0 backdrop-blur-sm group-hover:opacity-100"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(bookmark.id);
+            }}
+          >
+            {selected && (
+              <svg className="size-3.5" viewBox="0 0 14 14" fill="none">
+                <path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
         )}
 
         {/* Star overlay */}

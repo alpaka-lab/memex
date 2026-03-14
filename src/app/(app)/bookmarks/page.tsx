@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { useViewStore } from "@/lib/stores/view-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useSelectionStore } from "@/lib/stores/selection-store";
 
 import { BookmarkCard } from "@/components/bookmarks/bookmark-card";
 import { BookmarkRow } from "@/components/bookmarks/bookmark-row";
@@ -15,6 +16,7 @@ import { BookmarkCardSkeleton } from "@/components/bookmarks/bookmark-card-skele
 import { BookmarkRowSkeleton } from "@/components/bookmarks/bookmark-row-skeleton";
 import { QuickAddModal } from "@/components/bookmarks/quick-add-modal";
 import { BookmarkDetailPanel } from "@/components/bookmarks/bookmark-detail-panel";
+import { BulkActionBar } from "@/components/bookmarks/bulk-action-bar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +26,8 @@ export default function BookmarksPage() {
   const { view, sort } = useViewStore();
   const { openQuickAdd, detailBookmarkId, openDetail, closeDetail } =
     useModalStore();
+  const { selectedIds, toggle: toggleSelection, isSelecting } =
+    useSelectionStore();
 
   const {
     data: bookmarks,
@@ -100,19 +104,28 @@ export default function BookmarksPage() {
 
   const handleBookmarkClick = useCallback(
     (bookmark: BookmarkData) => {
-      openDetail(bookmark.id);
+      if (isSelecting) {
+        toggleSelection(bookmark.id);
+      } else {
+        openDetail(bookmark.id);
+      }
     },
-    [openDetail]
+    [openDetail, isSelecting, toggleSelection]
   );
 
   const selectedBookmark =
     bookmarks.find((b) => b.id === detailBookmarkId) ?? null;
+
+  const allIds = bookmarks.map((b) => b.id);
 
   // Skeleton count for initial load
   const skeletonCount = 6;
 
   return (
     <>
+      {/* Bulk action bar */}
+      <BulkActionBar totalCount={bookmarks.length} allIds={allIds} />
+
       {/* Loading state */}
       {isLoading && (
         <>
@@ -150,6 +163,8 @@ export default function BookmarksPage() {
             <BookmarkCard
               key={bookmark.id}
               bookmark={bookmark as BookmarkData}
+              selected={selectedIds.has(bookmark.id)}
+              onSelect={toggleSelection}
               onClick={handleBookmarkClick}
               onEdit={(id) => openDetail(id)}
               onToggleStar={(id) => toggleStar.mutate(id)}
@@ -167,6 +182,8 @@ export default function BookmarksPage() {
             <BookmarkRow
               key={bookmark.id}
               bookmark={bookmark as BookmarkData}
+              selected={selectedIds.has(bookmark.id)}
+              onSelect={toggleSelection}
               onClick={handleBookmarkClick}
               onEdit={(id) => openDetail(id)}
               onToggleStar={(id) => toggleStar.mutate(id)}
