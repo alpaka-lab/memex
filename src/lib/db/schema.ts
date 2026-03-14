@@ -83,6 +83,7 @@ export const bookmarks = sqliteTable(
     favicon: text('favicon'),
     domain: text('domain'),
     note: text('note'),
+    summary: text('summary'),
     collectionId: text('collectionId').references(() => collections.id),
     isStarred: integer('isStarred').default(0),
     isArchived: integer('isArchived').default(0),
@@ -121,11 +122,26 @@ export const bookmarkTags = sqliteTable(
     tagId: text('tagId')
       .notNull()
       .references(() => tags.id),
+    isAiGenerated: integer('isAiGenerated').default(0),
   },
   (table) => [
     primaryKey({ columns: [table.bookmarkId, table.tagId] }),
   ]
 );
+
+export const userAiSettings = sqliteTable('user_ai_settings', {
+  id: text('id').primaryKey(),
+  userId: text('userId')
+    .notNull()
+    .unique()
+    .references(() => users.id),
+  provider: text('provider'),
+  apiKeyEncrypted: text('apiKeyEncrypted'),
+  autoTagEnabled: integer('autoTagEnabled').default(0),
+  autoSummaryEnabled: integer('autoSummaryEnabled').default(0),
+  createdAt: integer('createdAt', { mode: 'timestamp' }),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }),
+});
 
 // ── Type exports ──────────────────────────────────────────────────────
 
@@ -137,3 +153,6 @@ export type NewCollection = typeof collections.$inferInsert;
 
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
+
+export type UserAiSettings = typeof userAiSettings.$inferSelect;
+export type NewUserAiSettings = typeof userAiSettings.$inferInsert;
