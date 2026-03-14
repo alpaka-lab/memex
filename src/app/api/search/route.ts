@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
       b.ogImage,
       b.favicon,
       b.domain,
+      b.isStarred,
+      b.isArchived,
       b.createdAt,
       snippet(bookmarks_fts, 0, '<mark>', '</mark>', '...', 32) AS titleSnippet,
       snippet(bookmarks_fts, 1, '<mark>', '</mark>', '...', 32) AS descriptionSnippet,

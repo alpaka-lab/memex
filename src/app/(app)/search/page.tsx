@@ -3,9 +3,18 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, FileSearch } from "lucide-react";
+import { useViewStore } from "@/lib/stores/view-store";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useSelectionStore } from "@/lib/stores/selection-store";
+import { useBookmarkMutations } from "@/lib/hooks/use-bookmark-mutations";
+import { BookmarkCard } from "@/components/bookmarks/bookmark-card";
+import { BookmarkRow } from "@/components/bookmarks/bookmark-row";
+import { BookmarkDetailPanel } from "@/components/bookmarks/bookmark-detail-panel";
+import { BulkActionBar } from "@/components/bookmarks/bulk-action-bar";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { BookmarkData } from "@/components/bookmarks/bookmark-card";
 
 interface SearchResult {
   id: string;
@@ -16,6 +25,8 @@ interface SearchResult {
   ogImage: string | null;
   favicon: string | null;
   domain: string;
+  isStarred: boolean;
+  isArchived: boolean;
   createdAt: string;
   titleSnippet: string;
   descriptionSnippet: string;
@@ -25,6 +36,10 @@ interface SearchResult {
 export default function SearchPage() {
   const [inputValue, setInputValue] = useState("");
   const [query, setQuery] = useState("");
+  const { view } = useViewStore();
+  const { detailBookmarkId, openDetail, closeDetail } = useModalStore();
+  const { selectedIds, toggle: toggleSelection, isSelecting } =
+    useSelectionStore();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -44,6 +59,33 @@ export default function SearchPage() {
   });
 
   const results = data ?? [];
+  const bookmarks: BookmarkData[] = results.map((r) => ({
+    id: r.id,
+    url: r.url,
+    title: r.title,
+    description: r.description,
+    ogImage: r.ogImage,
+    favicon: r.favicon,
+    domain: r.domain,
+    isStarred: r.isStarred,
+    isArchived: r.isArchived,
+    createdAt: r.createdAt,
+  }));
+
+  const { toggleStar, archiveBookmark, deleteBookmark } =
+    useBookmarkMutations(bookmarks);
+
+  const selectedBookmark =
+    bookmarks.find((b) => b.id === detailBookmarkId) ?? null;
+  const allIds = bookmarks.map((b) => b.id);
+
+  const handleClick = (bookmark: BookmarkData) => {
+    if (isSelecting) {
+      toggleSelection(bookmark.id);
+    } else {
+      openDetail(bookmark.id);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -88,44 +130,54 @@ export default function SearchPage() {
         />
       )}
 
-      {query && !isLoading && results.length > 0 && (
+      {query && !isLoading && bookmarks.length > 0 && (
         <>
           <p className="text-sm text-muted-foreground">
-            {results.length} result{results.length !== 1 ? "s" : ""}
+            {bookmarks.length} result{bookmarks.length !== 1 ? "s" : ""}
           </p>
-          <div className="space-y-3">
-            {results.map((result) => (
-              <a
-                key={result.id}
-                href={result.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
-              >
-                <h3
-                  className="text-sm font-semibold"
-                  dangerouslySetInnerHTML={{ __html: result.titleSnippet || result.title }}
+
+          <BulkActionBar totalCount={bookmarks.length} allIds={allIds} />
+
+          {view === "grid" ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {bookmarks.map((bookmark) => (
+                <BookmarkCard
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  selected={selectedIds.has(bookmark.id)}
+                  onSelect={toggleSelection}
+                  onClick={handleClick}
+                  onEdit={(id) => openDetail(id)}
+                  onToggleStar={(id) => toggleStar.mutate(id)}
+                  onArchive={(id) => archiveBookmark.mutate(id)}
+                  onDelete={(id) => deleteBookmark.mutate(id)}
                 />
-                {result.descriptionSnippet && (
-                  <p
-                    className="mt-1 text-sm text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: result.descriptionSnippet }}
-                  />
-                )}
-                {result.noteSnippet && (
-                  <p
-                    className="mt-1 text-xs italic text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: result.noteSnippet }}
-                  />
-                )}
-                <span className="mt-2 block text-xs text-muted-foreground">
-                  {result.domain}
-                </span>
-              </a>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {bookmarks.map((bookmark) => (
+                <BookmarkRow
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  selected={selectedIds.has(bookmark.id)}
+                  onSelect={toggleSelection}
+                  onClick={handleClick}
+                  onEdit={(id) => openDetail(id)}
+                  onToggleStar={(id) => toggleStar.mutate(id)}
+                  onArchive={(id) => archiveBookmark.mutate(id)}
+                  onDelete={(id) => deleteBookmark.mutate(id)}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
+
+      <BookmarkDetailPanel
+        bookmark={selectedBookmark as BookmarkData | null}
+        onClose={closeDetail}
+      />
     </div>
   );
 }
