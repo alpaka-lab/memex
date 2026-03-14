@@ -274,7 +274,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Provider</Label>
                 <Select
-                  value={aiProvider || undefined}
+                  value={aiProvider || null}
                   onValueChange={(value) => {
                     if (value) {
                       setAiProvider(value);
