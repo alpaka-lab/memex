@@ -82,6 +82,7 @@ export function createTestDb() {
       favicon TEXT,
       domain TEXT,
       note TEXT,
+      summary TEXT,
       collectionId TEXT REFERENCES collections(id),
       isStarred INTEGER DEFAULT 0,
       isArchived INTEGER DEFAULT 0,
@@ -104,7 +105,19 @@ export function createTestDb() {
     CREATE TABLE IF NOT EXISTS bookmark_tags (
       bookmarkId TEXT NOT NULL REFERENCES bookmarks(id),
       tagId TEXT NOT NULL REFERENCES tags(id),
+      isAiGenerated INTEGER DEFAULT 0,
       PRIMARY KEY (bookmarkId, tagId)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_ai_settings (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL UNIQUE REFERENCES users(id),
+      provider TEXT,
+      apiKeyEncrypted TEXT,
+      autoTagEnabled INTEGER DEFAULT 0,
+      autoSummaryEnabled INTEGER DEFAULT 0,
+      createdAt INTEGER,
+      updatedAt INTEGER
     );
   `);
 

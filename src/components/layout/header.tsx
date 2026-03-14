@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { signOut } from "@/lib/auth-client";
+import { signOut, useSession } from "@/lib/auth-client";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { useViewStore, type SortOption } from "@/lib/stores/view-store";
 import { useModalStore } from "@/lib/stores/modal-store";
@@ -41,7 +41,10 @@ export function Header() {
   const { toggle } = useSidebarStore();
   const { view, setView, sort, setSort } = useViewStore();
   const { openQuickAdd } = useModalStore();
+  const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
+
+  const userInitial = session?.user?.name?.charAt(0)?.toUpperCase() ?? "U";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +147,7 @@ export function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger className="ml-1 flex size-8 cursor-pointer items-center justify-center rounded-lg outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
             <div className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-              U
+              {userInitial}
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

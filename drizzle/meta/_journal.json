@@ -15,6 +15,13 @@
       "when": 1773035162823,
       "tag": "0001_yummy_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773506975802,
+      "tag": "0002_lucky_human_robot",
+      "breakpoints": true
     }
   ]
 }

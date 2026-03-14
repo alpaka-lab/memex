@@ -1,14 +1,16 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Clock } from "lucide-react";
 import { useMemo } from "react";
+import { Clock } from "lucide-react";
+import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { useViewStore } from "@/lib/stores/view-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useSelectionStore } from "@/lib/stores/selection-store";
+import { useBookmarkMutations } from "@/lib/hooks/use-bookmark-mutations";
 import { BookmarkCard } from "@/components/bookmarks/bookmark-card";
 import { BookmarkRow } from "@/components/bookmarks/bookmark-row";
 import { BookmarkDetailPanel } from "@/components/bookmarks/bookmark-detail-panel";
+import { BulkActionBar } from "@/components/bookmarks/bulk-action-bar";
 import { BookmarkCardSkeleton } from "@/components/bookmarks/bookmark-card-skeleton";
 import { BookmarkRowSkeleton } from "@/components/bookmarks/bookmark-row-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -47,77 +49,43 @@ function groupBookmarksByDate(bookmarks: BookmarkData[]) {
 export default function RecentPage() {
   const { view } = useViewStore();
   const { detailBookmarkId, openDetail, closeDetail } = useModalStore();
-  const queryClient = useQueryClient();
+  const { selectedIds, toggle: toggleSelection, isSelecting } =
+    useSelectionStore();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["bookmarks", "recent"],
-    queryFn: async () => {
-      const res = await fetch("/api/bookmarks?limit=50");
-      if (!res.ok) throw new Error("Failed to fetch recent bookmarks");
-      return res.json() as Promise<{ data: BookmarkData[]; nextCursor: string | null }>;
-    },
-  });
+  const { data: bookmarks, isLoading } = useBookmarks({});
+  const grouped = useMemo(
+    () => groupBookmarksByDate(bookmarks as BookmarkData[]),
+    [bookmarks]
+  );
 
-  const bookmarks = useMemo(() => data?.data ?? [], [data]);
-  const grouped = useMemo(() => groupBookmarksByDate(bookmarks), [bookmarks]);
-  const selectedBookmark = bookmarks.find((b) => b.id === detailBookmarkId) ?? null;
+  const { toggleStar, archiveBookmark, deleteBookmark } =
+    useBookmarkMutations(bookmarks);
 
-  const toggleStar = useMutation({
-    mutationFn: async (id: string) => {
-      const bookmark = bookmarks.find((b) => b.id === id);
-      const res = await fetch(`/api/bookmarks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isStarred: bookmark?.isStarred ? 0 : 1 }),
-      });
-      if (!res.ok) throw new Error('Failed to toggle star');
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bookmarks'] }),
-  });
+  const selectedBookmark =
+    bookmarks.find((b) => b.id === detailBookmarkId) ?? null;
+  const allIds = bookmarks.map((b) => b.id);
 
-  const archiveBookmark = useMutation({
-    mutationFn: async (id: string) => {
-      const bookmark = bookmarks.find((b) => b.id === id);
-      const res = await fetch(`/api/bookmarks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isArchived: bookmark?.isArchived ? 0 : 1 }),
-      });
-      if (!res.ok) throw new Error('Failed to archive');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-      toast.success('Bookmark archived');
-    },
-  });
-
-  const deleteBookmark = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/bookmarks/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-      toast.success('Bookmark deleted');
-    },
-  });
+  const handleClick = (bookmark: BookmarkData) => {
+    if (isSelecting) {
+      toggleSelection(bookmark.id);
+    } else {
+      openDetail(bookmark.id);
+    }
+  };
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Recent</h1>
         {view === "grid" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
               <BookmarkCardSkeleton key={i} />
             ))}
           </div>
         ) : (
           <div className="space-y-2">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <BookmarkRowSkeleton key={i} />
             ))}
           </div>
@@ -143,6 +111,8 @@ export default function RecentPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Recent</h1>
 
+      <BulkActionBar totalCount={bookmarks.length} allIds={allIds} />
+
       {grouped.map((group) => (
         <div key={group.label} className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">
@@ -150,12 +120,14 @@ export default function RecentPage() {
           </h2>
 
           {view === "grid" ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {group.bookmarks.map((bookmark) => (
                 <BookmarkCard
                   key={bookmark.id}
                   bookmark={bookmark}
-                  onClick={(b) => openDetail(b.id)}
+                  selected={selectedIds.has(bookmark.id)}
+                  onSelect={toggleSelection}
+                  onClick={handleClick}
                   onEdit={(id) => openDetail(id)}
                   onToggleStar={(id) => toggleStar.mutate(id)}
                   onArchive={(id) => archiveBookmark.mutate(id)}
@@ -169,7 +141,9 @@ export default function RecentPage() {
                 <BookmarkRow
                   key={bookmark.id}
                   bookmark={bookmark}
-                  onClick={(b) => openDetail(b.id)}
+                  selected={selectedIds.has(bookmark.id)}
+                  onSelect={toggleSelection}
+                  onClick={handleClick}
                   onEdit={(id) => openDetail(id)}
                   onToggleStar={(id) => toggleStar.mutate(id)}
                   onArchive={(id) => archiveBookmark.mutate(id)}

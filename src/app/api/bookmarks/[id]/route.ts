@@ -23,7 +23,7 @@ export async function PATCH(
 
   const allowedFields = [
     'url', 'title', 'description', 'ogImage', 'favicon',
-    'domain', 'note', 'collectionId', 'isStarred', 'isArchived',
+    'domain', 'note', 'summary', 'collectionId', 'isStarred', 'isArchived',
   ];
   for (const field of allowedFields) {
     if (field in body) {

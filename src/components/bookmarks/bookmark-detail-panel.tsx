@@ -15,12 +15,15 @@ import {
   Loader2,
   X,
   Copy,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { useCollections } from "@/lib/hooks/use-collections";
 import { useTags } from "@/lib/hooks/use-tags";
+import { useAiSettings } from "@/lib/hooks/use-ai-settings";
+import { useAiGenerateSummary } from "@/lib/hooks/use-ai";
 
 import {
   Sheet,
@@ -57,6 +60,8 @@ export function BookmarkDetailPanel({
   const queryClient = useQueryClient();
   const { data: collections } = useCollections();
   const { data: allTags } = useTags();
+  const { data: aiSettings } = useAiSettings();
+  const generateSummaryMutation = useAiGenerateSummary();
 
   const [note, setNote] = useState("");
   const [collectionId, setCollectionId] = useState<string>("");
@@ -251,6 +256,31 @@ export function BookmarkDetailPanel({
               {bookmark.description}
             </p>
           )}
+
+          {/* AI Summary */}
+          {bookmark.summary ? (
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1.5 text-muted-foreground">
+                <Sparkles className="size-3.5" />
+                AI Summary
+              </Label>
+              <p className="text-sm">{bookmark.summary}</p>
+            </div>
+          ) : aiSettings?.hasApiKey && aiSettings?.provider ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => generateSummaryMutation.mutate(bookmark.id)}
+              disabled={generateSummaryMutation.isPending}
+            >
+              {generateSummaryMutation.isPending ? (
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1.5 size-4" />
+              )}
+              Generate Summary
+            </Button>
+          ) : null}
 
           <Separator />
 

@@ -16,8 +16,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useViewStore } from "@/lib/stores/view-store";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useSelectionStore } from "@/lib/stores/selection-store";
+import { useBookmarkMutations } from "@/lib/hooks/use-bookmark-mutations";
 import { BookmarkCard } from "@/components/bookmarks/bookmark-card";
 import { BookmarkRow } from "@/components/bookmarks/bookmark-row";
+import { BookmarkDetailPanel } from "@/components/bookmarks/bookmark-detail-panel";
+import { BulkActionBar } from "@/components/bookmarks/bulk-action-bar";
 import { BookmarkCardSkeleton } from "@/components/bookmarks/bookmark-card-skeleton";
 import { BookmarkRowSkeleton } from "@/components/bookmarks/bookmark-row-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -57,6 +62,9 @@ export default function CollectionDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { view } = useViewStore();
+  const { detailBookmarkId, openDetail, closeDetail } = useModalStore();
+  const { selectedIds, toggle: toggleSelection, isSelecting } =
+    useSelectionStore();
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -89,6 +97,11 @@ export default function CollectionDetailPage() {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
+
+  const bookmarks = bookmarksData?.pages.flatMap((page) => page.data) ?? [];
+
+  const { toggleStar, archiveBookmark, deleteBookmark } =
+    useBookmarkMutations(bookmarks);
 
   const updateMutation = useMutation({
     mutationFn: async (data: { name: string; description: string; icon: string }) => {
@@ -144,7 +157,18 @@ export default function CollectionDetailPage() {
     });
   };
 
-  const bookmarks = bookmarksData?.pages.flatMap((page) => page.data) ?? [];
+  const selectedBookmark =
+    bookmarks.find((b) => b.id === detailBookmarkId) ?? null;
+  const allIds = bookmarks.map((b) => b.id);
+
+  const handleClick = (bookmark: BookmarkData) => {
+    if (isSelecting) {
+      toggleSelection(bookmark.id);
+    } else {
+      openDetail(bookmark.id);
+    }
+  };
+
   const isLoading = collectionLoading || bookmarksLoading;
 
   if (isLoading) {
@@ -152,14 +176,14 @@ export default function CollectionDetailPage() {
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         {view === "grid" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
               <BookmarkCardSkeleton key={i} />
             ))}
           </div>
         ) : (
           <div className="space-y-2">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <BookmarkRowSkeleton key={i} />
             ))}
           </div>
@@ -220,13 +244,21 @@ export default function CollectionDetailPage() {
         />
       ) : (
         <>
+          <BulkActionBar totalCount={bookmarks.length} allIds={allIds} />
+
           {view === "grid" ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {bookmarks.map((bookmark) => (
                 <BookmarkCard
                   key={bookmark.id}
                   bookmark={bookmark}
-                  onClick={(b) => window.open(b.url, "_blank")}
+                  selected={selectedIds.has(bookmark.id)}
+                  onSelect={toggleSelection}
+                  onClick={handleClick}
+                  onEdit={(id) => openDetail(id)}
+                  onToggleStar={(id) => toggleStar.mutate(id)}
+                  onArchive={(id) => archiveBookmark.mutate(id)}
+                  onDelete={(id) => deleteBookmark.mutate(id)}
                 />
               ))}
             </div>
@@ -236,7 +268,13 @@ export default function CollectionDetailPage() {
                 <BookmarkRow
                   key={bookmark.id}
                   bookmark={bookmark}
-                  onClick={(b) => window.open(b.url, "_blank")}
+                  selected={selectedIds.has(bookmark.id)}
+                  onSelect={toggleSelection}
+                  onClick={handleClick}
+                  onEdit={(id) => openDetail(id)}
+                  onToggleStar={(id) => toggleStar.mutate(id)}
+                  onArchive={(id) => archiveBookmark.mutate(id)}
+                  onDelete={(id) => deleteBookmark.mutate(id)}
                 />
               ))}
             </div>
@@ -255,6 +293,11 @@ export default function CollectionDetailPage() {
           )}
         </>
       )}
+
+      <BookmarkDetailPanel
+        bookmark={selectedBookmark as BookmarkData | null}
+        onClose={closeDetail}
+      />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>

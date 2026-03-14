@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useSession } from "@/lib/auth-client";
-import { Upload, Download, Loader2 } from "lucide-react";
+import { Upload, Download, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useAiSettings } from "@/lib/hooks/use-ai-settings";
 import {
   Card,
   CardContent,
@@ -23,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 
 export default function SettingsPage() {
   const { data: session, isPending } = useSession();
@@ -30,6 +33,21 @@ export default function SettingsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: aiSettings, isLoading: aiLoading, update: updateAiSettings, isUpdating: aiUpdating } = useAiSettings();
+  const [aiProvider, setAiProvider] = useState<string>("");
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [autoTag, setAutoTag] = useState(false);
+  const [autoSummary, setAutoSummary] = useState(false);
+
+  useEffect(() => {
+    if (aiSettings) {
+      setAiProvider(aiSettings.provider ?? "");
+      setAutoTag(aiSettings.autoTagEnabled);
+      setAutoSummary(aiSettings.autoSummaryEnabled);
+      setShowApiKeyInput(!aiSettings.hasApiKey);
+    }
+  }, [aiSettings]);
 
   const handleExport = async (format: "json" | "html") => {
     setIsExporting(true);
@@ -233,17 +251,124 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* AI Configuration Placeholder */}
-      <Card className="opacity-60">
+      {/* AI Configuration */}
+      <Card>
         <CardHeader>
-          <CardTitle>AI Configuration</CardTitle>
-          <CardDescription>Coming in v0.3</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="size-5" />
+            AI Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure AI-powered auto-tagging and summaries. Bring your own API key.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Configure AI-powered features like auto-tagging, smart summaries,
-            and content recommendations.
-          </p>
+        <CardContent className="space-y-4">
+          {aiLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
+            <>
+              {/* Provider */}
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select
+                  value={aiProvider || null}
+                  onValueChange={(value) => {
+                    if (value) {
+                      setAiProvider(value);
+                      updateAiSettings({ provider: value });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select AI provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                    <SelectItem value="openai">OpenAI (GPT-4o mini)</SelectItem>
+                    <SelectItem value="gemini">Google (Gemini Flash)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              {/* API Key */}
+              <div className="space-y-2">
+                <Label>API Key</Label>
+                {showApiKeyInput ? (
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      placeholder="Enter your API key"
+                      value={aiApiKey}
+                      onChange={(e) => setAiApiKey(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={!aiApiKey || aiUpdating}
+                      onClick={async () => {
+                        await updateAiSettings({ apiKey: aiApiKey });
+                        setAiApiKey("");
+                        setShowApiKeyInput(false);
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">Key saved</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowApiKeyInput(true)}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Auto-tag toggle */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Auto-tag bookmarks</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically suggest tags when saving a bookmark.
+                  </p>
+                </div>
+                <Switch
+                  checked={autoTag}
+                  onCheckedChange={(checked: boolean) => {
+                    setAutoTag(checked);
+                    updateAiSettings({ autoTagEnabled: checked });
+                  }}
+                />
+              </div>
+
+              {/* Auto-summary toggle */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Auto-generate summaries</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically generate a summary when saving a bookmark.
+                  </p>
+                </div>
+                <Switch
+                  checked={autoSummary}
+                  onCheckedChange={(checked: boolean) => {
+                    setAutoSummary(checked);
+                    updateAiSettings({ autoSummaryEnabled: checked });
+                  }}
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

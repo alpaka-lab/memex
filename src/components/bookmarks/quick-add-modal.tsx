@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useCollections } from "@/lib/hooks/use-collections";
 import { useTags } from "@/lib/hooks/use-tags";
+import { useAiSettings } from "@/lib/hooks/use-ai-settings";
+import { useAiGenerateTags, useAiGenerateSummary, useAiApplyTags } from "@/lib/hooks/use-ai";
 
 import {
   Dialog,
@@ -42,6 +44,10 @@ export function QuickAddModal() {
   const queryClient = useQueryClient();
   const { data: collections } = useCollections();
   const { data: tags } = useTags();
+  const { data: aiSettings } = useAiSettings();
+  const generateTagsMutation = useAiGenerateTags();
+  const generateSummaryMutation = useAiGenerateSummary();
+  const applyTagsMutation = useAiApplyTags();
 
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -158,6 +164,29 @@ export function QuickAddModal() {
 
       queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
       toast.success("Bookmark saved");
+
+      // Fire-and-forget AI features
+      if (aiSettings?.hasApiKey && aiSettings?.provider) {
+        if (aiSettings.autoTagEnabled) {
+          generateTagsMutation.mutate(bookmark.id, {
+            onSuccess: (data) => {
+              if (data.suggestions.length > 0) {
+                const tagNames = data.suggestions.map((s) => s.name);
+                applyTagsMutation.mutate(
+                  { bookmarkId: bookmark.id, tags: tagNames },
+                  { onSuccess: () => toast.success(`AI suggested ${tagNames.length} tags`) }
+                );
+              }
+            },
+          });
+        }
+        if (aiSettings.autoSummaryEnabled) {
+          generateSummaryMutation.mutate(bookmark.id, {
+            onSuccess: () => toast.success("AI summary generated"),
+          });
+        }
+      }
+
       resetForm();
       closeQuickAdd();
     },

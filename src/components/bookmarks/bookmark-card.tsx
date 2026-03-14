@@ -28,6 +28,7 @@ export interface BookmarkData {
   ogImage?: string | null;
   favicon?: string | null;
   domain: string;
+  summary?: string | null;
   tags?: string[];
   isStarred: boolean;
   isArchived: boolean;
