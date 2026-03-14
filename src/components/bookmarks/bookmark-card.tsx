@@ -8,7 +8,9 @@ import {
   Archive,
   Trash2,
   ExternalLink,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -153,6 +155,16 @@ export function BookmarkCard({
               <MoreHorizontal className="size-3.5 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(bookmark.url);
+                  toast.success("Link copied");
+                }}
+              >
+                <Copy className="mr-2 size-3.5" />
+                Copy Link
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();

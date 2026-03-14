@@ -1,7 +1,10 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useSession } from "@/lib/auth-client";
+import { Upload, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -10,6 +13,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -23,6 +27,65 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function SettingsPage() {
   const { data: session, isPending } = useSession();
   const { theme, setTheme } = useTheme();
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async (format: "json" | "html") => {
+    setIsExporting(true);
+    try {
+      const res = await fetch(`/api/export?format=${format}`);
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "json" ? "memex-export.json" : "memex-bookmarks.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Bookmarks exported");
+    } catch {
+      toast.error("Failed to export bookmarks");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const isJson = file.name.endsWith(".json");
+
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": isJson ? "application/json" : "text/html",
+        },
+        body: text,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Import failed");
+      }
+
+      const result = await res.json();
+      toast.success(
+        `Imported ${result.imported} bookmarks${result.skipped > 0 ? ` (${result.skipped} duplicates skipped)` : ""}`
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to import bookmarks");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -85,6 +148,87 @@ export default function SettingsPage() {
                 <SelectItem value="system">System</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Management Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Management</CardTitle>
+          <CardDescription>
+            Import and export your bookmarks.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Export */}
+          <div className="space-y-2">
+            <Label>Export Bookmarks</Label>
+            <p className="text-xs text-muted-foreground">
+              Download all your bookmarks, collections, and tags.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport("json")}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 size-4" />
+                )}
+                Export JSON
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport("html")}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 size-4" />
+                )}
+                Export HTML
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Import */}
+          <div className="space-y-2">
+            <Label>Import Bookmarks</Label>
+            <p className="text-xs text-muted-foreground">
+              Import bookmarks from a browser export (HTML) or JSON file.
+              Duplicate URLs will be skipped.
+            </p>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".html,.htm,.json"
+                onChange={handleImport}
+                className="hidden"
+                id="import-file"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 size-4" />
+                )}
+                {isImporting ? "Importing..." : "Choose File"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

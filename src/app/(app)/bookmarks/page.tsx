@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import type { BookmarkData } from "@/components/bookmarks/bookmark-card";
 
 export default function BookmarksPage() {
-  const { view } = useViewStore();
+  const { view, sort } = useViewStore();
   const { openQuickAdd, detailBookmarkId, openDetail, closeDetail } =
     useModalStore();
 
@@ -31,7 +31,7 @@ export default function BookmarksPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-  } = useBookmarks();
+  } = useBookmarks({ sort });
 
   const queryClient = useQueryClient();
 
