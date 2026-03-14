@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { db, sqlite } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import * as schema from '@/lib/db/schema';
-import { eq, and, desc, lt, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, lt, gt, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
 export async function GET(request: NextRequest) {
@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
   const archived = searchParams.get('archived');
   const search = searchParams.get('search');
   const cursor = searchParams.get('cursor');
+  const sort = searchParams.get('sort'); // newest (default), oldest, title-asc, title-desc, domain
   const limit = Math.min(Number(searchParams.get('limit')) || 20, 100);
 
   const conditions = [eq(schema.bookmarks.userId, userId)];
@@ -33,15 +34,42 @@ export async function GET(request: NextRequest) {
   if (archived === '1' || archived === 'true') {
     conditions.push(eq(schema.bookmarks.isArchived, 1));
   }
+
+  // Determine sort order and cursor direction
+  const getOrderBy = () => {
+    switch (sort) {
+      case 'oldest':
+        return asc(schema.bookmarks.createdAt);
+      case 'title-asc':
+        return asc(schema.bookmarks.title);
+      case 'title-desc':
+        return desc(schema.bookmarks.title);
+      case 'domain':
+        return asc(schema.bookmarks.domain);
+      default:
+        return desc(schema.bookmarks.createdAt);
+    }
+  };
+
   if (cursor) {
-    conditions.push(lt(schema.bookmarks.createdAt, new Date(cursor)));
+    if (sort === 'oldest') {
+      conditions.push(gt(schema.bookmarks.createdAt, new Date(cursor)));
+    } else if (sort === 'title-asc') {
+      conditions.push(gt(schema.bookmarks.title, cursor));
+    } else if (sort === 'title-desc') {
+      conditions.push(lt(schema.bookmarks.title, cursor));
+    } else if (sort === 'domain') {
+      conditions.push(gt(schema.bookmarks.domain, cursor));
+    } else {
+      conditions.push(lt(schema.bookmarks.createdAt, new Date(cursor)));
+    }
   }
 
   let query = db
     .select()
     .from(schema.bookmarks)
     .where(and(...conditions))
-    .orderBy(desc(schema.bookmarks.createdAt))
+    .orderBy(getOrderBy())
     .limit(limit + 1);
 
   // If filtering by tag, join through bookmarkTags
@@ -77,7 +105,7 @@ export async function GET(request: NextRequest) {
       .select()
       .from(schema.bookmarks)
       .where(and(...conditions))
-      .orderBy(desc(schema.bookmarks.createdAt))
+      .orderBy(getOrderBy())
       .limit(limit + 1);
   }
 
@@ -106,7 +134,7 @@ export async function GET(request: NextRequest) {
       .select()
       .from(schema.bookmarks)
       .where(and(...conditions))
-      .orderBy(desc(schema.bookmarks.createdAt))
+      .orderBy(getOrderBy())
       .limit(limit + 1);
   }
 
@@ -116,7 +144,13 @@ export async function GET(request: NextRequest) {
   if (results.length > limit) {
     results.pop();
     const last = results[results.length - 1];
-    nextCursor = last.createdAt?.toISOString() ?? null;
+    if (sort === 'title-asc' || sort === 'title-desc') {
+      nextCursor = last.title ?? null;
+    } else if (sort === 'domain') {
+      nextCursor = last.domain ?? null;
+    } else {
+      nextCursor = last.createdAt?.toISOString() ?? null;
+    }
   }
 
   return NextResponse.json({ data: results, nextCursor });

@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Loader2,
   X,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -253,7 +254,20 @@ export function BookmarkDetailPanel({
 
           <Separator />
 
-          {/* Star & Archive toggles */}
+          {/* Star, Archive & Copy toggles */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(bookmark.url);
+                toast.success("Link copied");
+              }}
+            >
+              <Copy className="mr-1.5 size-4" />
+              Copy Link
+            </Button>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

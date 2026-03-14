@@ -10,12 +10,15 @@ import {
   Moon,
   LogOut,
   Menu,
+  ArrowUpDown,
+  Plus,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
-import { useViewStore } from "@/lib/stores/view-store";
+import { useViewStore, type SortOption } from "@/lib/stores/view-store";
+import { useModalStore } from "@/lib/stores/modal-store";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,11 +27,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "title-asc", label: "Title A-Z" },
+  { value: "title-desc", label: "Title Z-A" },
+  { value: "domain", label: "Domain" },
+];
+
 export function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const { toggle } = useSidebarStore();
-  const { view, setView } = useViewStore();
+  const { view, setView, sort, setSort } = useViewStore();
+  const { openQuickAdd } = useModalStore();
   const { theme, setTheme } = useTheme();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -69,8 +81,42 @@ export function Header() {
         </div>
       </form>
 
-      {/* Right: view toggle + user menu */}
+      {/* Right: actions */}
       <div className="flex items-center gap-1">
+        {/* Quick Add */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden size-8 md:flex"
+          onClick={openQuickAdd}
+        >
+          <Plus className="size-4" />
+        </Button>
+
+        {/* Sort dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex size-8 cursor-pointer items-center justify-center rounded-lg outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50">
+            <ArrowUpDown className="size-4 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {sortOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => setSort(option.value)}
+                className={cn(sort === option.value && "font-semibold")}
+              >
+                {option.label}
+                {sort === option.value && (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    &#10003;
+                  </span>
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* View toggle */}
         <Button
           variant="ghost"
           size="icon"
@@ -94,6 +140,7 @@ export function Header() {
           <List className="size-4" />
         </Button>
 
+        {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger className="ml-1 flex size-8 cursor-pointer items-center justify-center rounded-lg outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
             <div className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
